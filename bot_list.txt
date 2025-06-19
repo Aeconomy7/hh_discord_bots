@@ -1,0 +1,6 @@
+dndbot
+hackerbot
+movienightbot
+jadbot
+lolbot
+gmbot

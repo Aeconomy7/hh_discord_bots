@@ -1,0 +1,131 @@
+import os
+
+HOME_DIR = os.path.expanduser("~") 
+
+##### GLOBALS SECTION #####
+
+# GENERAL/BOT GLOBALS
+BOT_DIR = f"{HOME_DIR}/discord/haunted_house_bots/gmbot"
+LOG_PATH = f"{BOT_DIR}/actions.log"
+CONFIG_STATUS_DIR = f"{BOT_DIR}/status_configs"
+ADMIN_ID = [DISCORD_ADMIN_USER_ID]
+DEBUG=True
+RUNNING_PROCS = {}
+LAN_IP = "[LAN_IP]"
+DOMAIN = "[DOMAIN]"
+STEAM_ID = "[STEAM_ID]"
+START_MAPS_FILE = os.path.join(CONFIG_STATUS_DIR, "start_maps.json")
+
+# ARMA GLOBALS
+ARMASERVER_ROOT=f"{HOME_DIR}/.local/share/Steam/steamapps/common/Arma Reforger Server"
+ARMASERVER_EXEC=f"{ARMASERVER_ROOT}/ArmaReforgerServer"
+ARMASERVER_CONFIG=f"{HOME_DIR}/Games/ArmaReforger/config/config.json"
+ARMASERVER_FPS="120"
+
+# GMOD GLOBALS
+GMOD_GAMES = ["ttt", "sandbox", "prophunt"]
+GMOD_LOGFILE_ROOT=f"{HOME_DIR}/Games/GarrysMod/Logs/"
+GMOD_FASTDL_ROOT_DIR=f"{HOME_DIR}/Games/GarrysMod/FastDL/"
+GMOD_MAX_PLAYERS="20"
+GMOD_SERVER_RUNNING=False
+
+# TTT GLOBALS
+TTT_START_MAP="ttt_holidayvilla"
+TTT_ROOT=f"{HOME_DIR}/Games/GarrysMod/TRT_TTT_FM"
+TTT_ULX_LOGS=f"{TTT_ROOT}/garrysmod/data/ulx_logs/"
+TTT_FASTDL_PORT=27000
+TTT_PORT=27015
+
+# SANDBOX GLOBALS
+SANDBOX_START_MAP="gm_construct"
+SANDBOX_ROOT=f"{HOME_DIR}/Games/GarrysMod/TRT_SANDBOX"
+SANDBOX_FASTDL_PORT=27001
+SANDBOX_PORT=27016
+
+PROPHUNT_START_MAP="ph_restaurant"
+PROPHUNT_ROOT=f"{HOME_DIR}/Games/GarrysMod/TRT_PROPHUNT"
+PROPHUNT_FASTDL_PORT=27002
+PROPHUNT_PORT=27017
+
+
+
+GAMES_CONFIG = {
+    "arma": {
+        "role": "armaman",
+        "exec_path": ARMASERVER_EXEC,
+        "config_file_path": ARMASERVER_CONFIG,
+        "profile_path": ARMASERVER_ROOT,
+        "fps": ARMASERVER_FPS,
+        "server_process_name": "ArmaReforgerServer",
+        "command_args": [
+            "-config", ARMASERVER_CONFIG,
+            "-profile", ARMASERVER_ROOT,
+            "-maxFPS", ARMASERVER_FPS
+        ]
+    },
+    # $TTT_ROOT/srcds_run -game garrysmod +sv_setsteamaccount [STEAM_ID] +maxplayers 20 +gamemode terrortown +map $TTT_START_MAP
+    "ttt": {
+        "role": "gary",
+        "exec_path": f"{TTT_ROOT}/srcds_run",
+        "config_file_path": f"{TTT_ROOT}/garrysmod/cfg/server_TTT.cfg",
+        "map": TTT_START_MAP,
+        "game_mode": "terrortown",
+        "server_process_name": "srcds_linux",
+        "command_args": [
+            "-game", "garrysmod",
+            "-port", str(TTT_PORT),
+            "+sv_setsteamaccount", STEAM_ID,
+            #"-console",
+            #"-autoupdate",
+            "+maxplayers", GMOD_MAX_PLAYERS,
+            "+map", TTT_START_MAP,
+            "+gamemode", "terrortown"
+        ],
+        "fastdl_path": GMOD_FASTDL_ROOT_DIR,  # or a specific path for TTT
+        "fastdl_port": TTT_FASTDL_PORT
+    },
+    "sandbox": {
+        "role": "gary",
+        "exec_path": f"{SANDBOX_ROOT}/srcds_run",
+        "config_file_path": f"{SANDBOX_ROOT}/garrysmod/cfg/server_SANDBOX.cfg",
+        "map": SANDBOX_START_MAP,
+        "game_mode": "sandbox",
+        "server_process_name": "srcds_linux",
+        "command_args": [
+            "-game", "garrysmod",
+            "-port", str(SANDBOX_PORT),
+            "+sv_setsteamaccount", STEAM_ID,
+            "+maxplayers", GMOD_MAX_PLAYERS,
+            "+map", SANDBOX_START_MAP,
+            "+gamemode", "sandbox",
+            "+host_workshop_collection", "621248766",
+            "-authkey", "[STEAM_AUTH_KEY]"
+        ],
+        "fastdl_path": GMOD_FASTDL_ROOT_DIR,  # or a specific path for Sandbox
+        "fastdl_port": SANDBOX_FASTDL_PORT
+    },
+    "prophunt": {
+        "role": "gary",
+        "exec_path": f"{PROPHUNT_ROOT}/srcds_run",
+        "config_file_path": f"{PROPHUNT_ROOT}/garrysmod/cfg/server_PROPHUNT.cfg",
+        "map": PROPHUNT_START_MAP,
+        "game_mode": "prop_hunt",
+        "server_process_name": "srcds_linux",
+        "command_args": [
+            "-game", "garrysmod",
+            "-port", str(PROPHUNT_PORT),
+            "+sv_setsteamaccount", STEAM_ID,
+            "+maxplayers", GMOD_MAX_PLAYERS,
+            "+map", PROPHUNT_START_MAP,
+            "+gamemode", "prop_hunt"
+        ],
+        "fastdl_path": GMOD_FASTDL_ROOT_DIR,  # or a specific path for Prophunt
+        "fastdl_port": PROPHUNT_FASTDL_PORT
+    }
+}
+##### END GLOBALS #####
+
+
+
+def get_game_config(game_name):
+    return GAMES_CONFIG.get(game_name)
