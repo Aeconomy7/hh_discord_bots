@@ -5,15 +5,15 @@ HOME_DIR = os.path.expanduser("~")
 ##### GLOBALS SECTION #####
 
 # GENERAL/BOT GLOBALS
-BOT_DIR = f"{HOME_DIR}/discord/haunted_house_bots/gmbot"
+BOT_DIR = f"{HOME_DIR}/discord/hh_discord_bots/gmbot"
 LOG_PATH = f"{BOT_DIR}/actions.log"
 CONFIG_STATUS_DIR = f"{BOT_DIR}/status_configs"
-ADMIN_ID = [DISCORD_ADMIN_USER_ID]
+ADMIN_ID = [ "DISCORD USER ID OF ADMINS" ]
 DEBUG=True
 RUNNING_PROCS = {}
 LAN_IP = "[LAN_IP]"
-DOMAIN = "[DOMAIN]"
-STEAM_ID = "[STEAM_ID]"
+DOMAIN = "[PUBLIC_IP_OR_DOMAIN]"
+STEAM_ID = "[STEAM_ID_FOR_SV_SETSTEAMACCOUNT-OPTIONAL]"
 START_MAPS_FILE = os.path.join(CONFIG_STATUS_DIR, "start_maps.json")
 
 # ARMA GLOBALS
@@ -23,7 +23,7 @@ ARMASERVER_CONFIG=f"{HOME_DIR}/Games/ArmaReforger/config/config.json"
 ARMASERVER_FPS="120"
 
 # GMOD GLOBALS
-GMOD_GAMES = ["ttt", "sandbox", "prophunt"]
+GMOD_GAMES = ["ttt", "sandbox", "prophunt", "surf"]
 GMOD_LOGFILE_ROOT=f"{HOME_DIR}/Games/GarrysMod/Logs/"
 GMOD_FASTDL_ROOT_DIR=f"{HOME_DIR}/Games/GarrysMod/FastDL/"
 GMOD_MAX_PLAYERS="20"
@@ -33,19 +33,28 @@ GMOD_SERVER_RUNNING=False
 TTT_START_MAP="ttt_holidayvilla"
 TTT_ROOT=f"{HOME_DIR}/Games/GarrysMod/TRT_TTT_FM"
 TTT_ULX_LOGS=f"{TTT_ROOT}/garrysmod/data/ulx_logs/"
+TTT_COLLECTIONS = [ "COLLECTION_ID1", "COLLECTION_ID2" ]
 TTT_FASTDL_PORT=27000
 TTT_PORT=27015
 
 # SANDBOX GLOBALS
 SANDBOX_START_MAP="gm_construct"
 SANDBOX_ROOT=f"{HOME_DIR}/Games/GarrysMod/TRT_SANDBOX"
+SANDBOX_COLLECTIONS = [ "COLLECTION_ID1", "COLLECTION_ID2" ]
 SANDBOX_FASTDL_PORT=27001
 SANDBOX_PORT=27016
 
 PROPHUNT_START_MAP="ph_restaurant"
 PROPHUNT_ROOT=f"{HOME_DIR}/Games/GarrysMod/TRT_PROPHUNT"
+PROPHUNT_COLLECTIONS = [ "COLLECTION_ID1", "COLLECTION_ID2" ]
 PROPHUNT_FASTDL_PORT=27002
 PROPHUNT_PORT=27017
+
+SURF_START_MAP="surf_kitsune"
+SURF_ROOT=f"{HOME_DIR}/Games/GarrysMod/TRT_SURF"
+SURF_COLLECTIONS = [ "COLLECTION_ID1", "COLLECTION_ID2" ]
+SURF_FASTDL_PORT=27003
+SURF_PORT=27018
 
 
 
@@ -63,7 +72,6 @@ GAMES_CONFIG = {
             "-maxFPS", ARMASERVER_FPS
         ]
     },
-    # $TTT_ROOT/srcds_run -game garrysmod +sv_setsteamaccount [STEAM_ID] +maxplayers 20 +gamemode terrortown +map $TTT_START_MAP
     "ttt": {
         "role": "gary",
         "exec_path": f"{TTT_ROOT}/srcds_run",
@@ -81,7 +89,7 @@ GAMES_CONFIG = {
             "+map", TTT_START_MAP,
             "+gamemode", "terrortown"
         ],
-        "fastdl_path": GMOD_FASTDL_ROOT_DIR,  # or a specific path for TTT
+        "fastdl_path": f"{GMOD_FASTDL_ROOT_DIR}ttt/",  # or a specific path for TTT
         "fastdl_port": TTT_FASTDL_PORT
     },
     "sandbox": {
@@ -94,15 +102,33 @@ GAMES_CONFIG = {
         "command_args": [
             "-game", "garrysmod",
             "-port", str(SANDBOX_PORT),
-            "+sv_setsteamaccount", STEAM_ID,
+            # "+sv_setsteamaccount", STEAM_ID,
             "+maxplayers", GMOD_MAX_PLAYERS,
             "+map", SANDBOX_START_MAP,
             "+gamemode", "sandbox",
-            "+host_workshop_collection", "621248766",
-            "-authkey", "[STEAM_AUTH_KEY]"
+            "+host_workshop_collection", "COLLECTION_ID1"
+            "-authkey", "[AUTHKEY]"
         ],
-        "fastdl_path": GMOD_FASTDL_ROOT_DIR,  # or a specific path for Sandbox
+        "fastdl_path": f"{GMOD_FASTDL_ROOT_DIR}sandbox/",  # or a specific path for Sandbox
         "fastdl_port": SANDBOX_FASTDL_PORT
+    },
+    "surf": {
+        "role": "gary",
+        "exec_path": f"{SURF_ROOT}/srcds_run",
+        "config_file_path": f"{SURF_ROOT}/garrysmod/cfg/server.cfg",
+        "map": SURF_START_MAP,
+        "game_mode": "g-surf",
+        "server_process_name": "srcds_linux",
+        "command_args": [
+            "-game", "garrysmod",
+            "-port", str(SURF_PORT),
+            # "+sv_setsteamaccount", STEAM_ID,
+            "+maxplayers", GMOD_MAX_PLAYERS,
+            "+map", SURF_START_MAP,
+            "+gamemode", "g-surf"
+        ],
+        "fastdl_path": f"{GMOD_FASTDL_ROOT_DIR}surf/",  # or a specific path for Sandbox
+        "fastdl_port": SURF_FASTDL_PORT
     },
     "prophunt": {
         "role": "gary",
@@ -114,12 +140,12 @@ GAMES_CONFIG = {
         "command_args": [
             "-game", "garrysmod",
             "-port", str(PROPHUNT_PORT),
-            "+sv_setsteamaccount", STEAM_ID,
+            # "+sv_setsteamaccount", STEAM_ID,
             "+maxplayers", GMOD_MAX_PLAYERS,
             "+map", PROPHUNT_START_MAP,
             "+gamemode", "prop_hunt"
         ],
-        "fastdl_path": GMOD_FASTDL_ROOT_DIR,  # or a specific path for Prophunt
+        "fastdl_path": f"{GMOD_FASTDL_ROOT_DIR}prophunt/",  # or a specific path for Prophunt
         "fastdl_port": PROPHUNT_FASTDL_PORT
     }
 }

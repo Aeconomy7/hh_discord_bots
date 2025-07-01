@@ -14,6 +14,7 @@ import socket
 # Customs imports
 from config import *
 from functions.gmod_functions import *
+from views.pageable_embed_view import PageableEmbedView
 
 # ========== LOCAL CONFIGURATION ==========
 TOKEN='XXXX'
@@ -107,9 +108,11 @@ client = commands.Bot(command_prefix="!", intents=intents)
 
 @client.event
 async def on_ready():
+    global GMOD_SERVER_RUNNING
     print(f"[+] Logged in as {client.user}")
     # Clear previous RUNNING_PROCS
     RUNNING_PROCS.clear()
+    GMOD_SERVER_RUNNING = False
     for game, config in GAMES_CONFIG.items():
         proc_name = config.get("server_process_name")
         port = str(config["command_args"][config["command_args"].index("-port") + 1]) if "-port" in config["command_args"] else None
@@ -124,6 +127,8 @@ async def on_ready():
                 continue
         if not found and game in RUNNING_PROCS:
             del RUNNING_PROCS[game]
+    if any(game in RUNNING_PROCS for game in GMOD_GAMES):
+        GMOD_SERVER_RUNNING = True
     await set_status()
     await client.tree.sync()
 
@@ -155,7 +160,7 @@ async def start_server(interaction: discord.Interaction, game: str, map: str = N
         await interaction.response.send_message(f"❌ Unknown game: {game}")
         return
 
-    if interaction.user.id == ADMIN_ID:
+    if interaction.user.id in ADMIN_ID:
         RUN_GAME = True
     elif has_required_role(interaction, config['role']):
         RUN_GAME = True 
@@ -180,6 +185,9 @@ async def start_server(interaction: discord.Interaction, game: str, map: str = N
             if game == "prophunt" and not map.startswith("ph_"):
                 await interaction.response.send_message("❌ Prophunt maps must start with 'ph_'.", ephemeral=True)
                 return
+            if game == "surf" and not map.startswith("surf_"):
+                await interaction.response.send_message("❌ Surf maps must start with 'surf_'.", ephemeral=True)
+                return
             # Optionally, check if map exists
             if game == "ttt":
                 available_maps = list_gmod_maps(TTT_ROOT, prefix="ttt")
@@ -187,15 +195,17 @@ async def start_server(interaction: discord.Interaction, game: str, map: str = N
                 available_maps = list_gmod_maps(SANDBOX_ROOT)
             elif game == "prophunt":
                 available_maps = list_gmod_maps(PROPHUNT_ROOT, prefix="ph")
+            elif game == "surf":
+                available_maps = list_gmod_maps(SURF_ROOT, prefix="surf")
             else:
                 available_maps = []
             if map not in available_maps:
                 await interaction.response.send_message(f"❌ Map '{map}' not found for {game}.", ephemeral=True)
                 return
 
-    if game in GMOD_GAMES and GMOD_SERVER_RUNNING:
-        await interaction.response.send_message(f"⚠️ Garry's Mod server is already running.")
-        return
+    # if game in GMOD_GAMES and GMOD_SERVER_RUNNING:
+    #     await interaction.response.send_message(f"⚠️ Garry's Mod server is already running.")
+    #     return
 
     # --- NEW LOGIC: Use persistent start map if not specified ---
     start_maps = load_start_maps()
@@ -232,7 +242,7 @@ async def stop_server(interaction: discord.Interaction, game: str):
     RUN_GAME = False
     game = game.lower()
 
-    if interaction.user.id == ADMIN_ID:
+    if interaction.user.id in ADMIN_ID:
         RUN_GAME = True
     elif game == 'arma' and (interaction.user.id == 121809298253807620 or interaction.user.id == 267123970770337792):
         RUN_GAME = True
@@ -313,6 +323,7 @@ async def status(interaction: discord.Interaction, game: str = None):
         "ttt": TTT_PORT,
         "sandbox": SANDBOX_PORT,
         "prophunt": PROPHUNT_PORT,
+        "surf": SURF_PORT
     }
 
     # If a game is specified, show only that game's status
@@ -328,7 +339,7 @@ async def status(interaction: discord.Interaction, game: str = None):
             msg = f"**ARMA**: {get_arma_status()}"
         else:
             msg = "Unknown game."
-        await interaction.followup.send(msg)
+        await interaction.response.send_message(msg)
         return
 
     # If no game specified, show all statuses
@@ -336,7 +347,7 @@ async def status(interaction: discord.Interaction, game: str = None):
     for g in ports:
         status_msgs.append(f"**{g.upper()}**: {get_gmod_status(g, ports[g])}\n")
     status_msgs.append(f"**{'ARMA'}**: {get_arma_status()}\n")
-    await interaction.followup.send("\n".join(status_msgs))
+    await interaction.response.send_message("\n".join(status_msgs))
 
 
 
@@ -380,6 +391,8 @@ async def list_maps(interaction: discord.Interaction, game: str):
         maps = list_gmod_maps(SANDBOX_ROOT)
     elif game == "prophunt":
         maps = list_gmod_maps(PROPHUNT_ROOT, prefix="ph")
+    elif game == "surf":
+        maps = list_gmod_maps(SURF_ROOT, prefix="surf")
     else:
         await interaction.response.send_message("Unknown GMOD game mode.", ephemeral=True)
         return
@@ -388,30 +401,15 @@ async def list_maps(interaction: discord.Interaction, game: str):
         await interaction.response.send_message(f"No maps found for {game}.", ephemeral=True)
         return
 
-    # Split maps into chunks that fit Discord's 2000 character limit
-    chunk = []
-    chunk_len = 0
-    max_len = 1900  # leave room for formatting
-    sent_first = False
-    for map_name in maps:
-        line = map_name + "\n"
-        if chunk_len + len(line) > max_len:
-            msg = f"Available maps for {game.upper()}:\n```\n{''.join(chunk)}```" if not sent_first else f"```\n{''.join(chunk)}```"
-            if not sent_first:
-                await interaction.response.send_message(msg)
-                sent_first = True
-            else:
-                await interaction.followup.send(msg)
-            chunk = []
-            chunk_len = 0
-        chunk.append(line)
-        chunk_len += len(line)
-    if chunk:
-        msg = f"Available maps for {game.upper()}:\n```\n{''.join(chunk)}```" if not sent_first else f"```\n{''.join(chunk)}```"
-        if not sent_first:
-            await interaction.response.send_message(msg)
-        else:
-            await interaction.followup.send(msg)
+    # Paginate results (25 per page)
+    per_page = 25
+    pages = [
+        "\n".join(maps[i:i+per_page])
+        for i in range(0, len(maps), per_page)
+    ]
+    title = f"Maps for {game.upper()}"
+    view = PageableEmbedView(pages, interaction.user.id, title=title)
+    await interaction.response.send_message(embed=view.get_embed(), view=view)
 
 
 
@@ -432,6 +430,8 @@ async def search_maps(interaction: discord.Interaction, game: str, query: str):
         maps = list_gmod_maps(SANDBOX_ROOT)
     elif game == "prophunt":
         maps = list_gmod_maps(PROPHUNT_ROOT, prefix="ph")
+    elif game == "surf":
+        maps = list_gmod_maps(SURF_ROOT, prefix="surf")
     else:
         await interaction.response.send_message("Unknown GMOD game mode.", ephemeral=True)
         return
@@ -471,14 +471,23 @@ async def search_maps(interaction: discord.Interaction, game: str, query: str):
 @client.tree.command(name="set_start_map", description="Set the default start map for a game")
 @app_commands.describe(game="The game to set the map for", map="The map name")
 async def set_start_map(interaction: discord.Interaction, game: str, map: str):
+    # Disallow DMs
+    if interaction.guild is None:
+        await interaction.response.send_message("❌ This command can only be used in a server (not in DMs).", ephemeral=True)
+        return
+    
     # Check for gary role
-    if not any(role.name == "gary" for role in interaction.user.roles):
-        await interaction.response.send_message("❌ You do not have permission to use this command.", ephemeral=True)
+    try:
+        if not any(role.name == "gary" for role in interaction.user.roles):
+            await interaction.response.send_message("❌ You do not have permission to use this command.", ephemeral=True)
+            return
+    except discord.Forbidden:
+        await interaction.response.send_message("❌ I am unable to check your roles currently.", ephemeral=True)
         return
 
     # Validate game
-    if game not in ["ttt", "sandbox", "prophunt"]:
-        await interaction.response.send_message("❌ Invalid game. Choose from: ttt, sandbox, prophunt.", ephemeral=True)
+    if game not in ["ttt", "sandbox", "prophunt", "surf"]:
+        await interaction.response.send_message(f"❌ Invalid game. Choose from: {str(GMOD_GAMES)}.", ephemeral=True)
         return
 
     # Update and save
@@ -503,6 +512,7 @@ async def connect_command(interaction: discord.Interaction, game: str):
         "ttt": TTT_PORT,
         "sandbox": SANDBOX_PORT,
         "prophunt": PROPHUNT_PORT,
+        "surf": SURF_PORT
     }
     if game not in ports:
         await interaction.response.send_message("❌ Unknown GMOD game mode.", ephemeral=True)
@@ -514,5 +524,41 @@ async def connect_command(interaction: discord.Interaction, game: str):
     await interaction.response.send_message(
         f"To connect to **{game}**, open your GMOD console and enter:\n```\n{command}\n```"
     )
+
+
+@client.tree.command(name="gmod_collections", description="Show Steam Workshop collections for each GMOD gamemode")
+async def gmod_collections(interaction: discord.Interaction):
+
+    collections = {
+        "TTT": TTT_COLLECTIONS,
+        "Sandbox": SANDBOX_COLLECTIONS,
+        "Prophunt": PROPHUNT_COLLECTIONS,
+        "Surf": SURF_COLLECTIONS,
+    }
+    lines = []
+    for mode, ids in collections.items():
+        if ids:
+            lines.append(f"**{mode} Collections:**")
+            for cid in ids:
+                url = f"https://steamcommunity.com/sharedfiles/filedetails/?id={cid}"
+                lines.append(f"<{url}>")
+            lines.append("")  # Blank line for spacing
+
+    msg = "\n".join(lines) if lines else "No collections found."
+    await interaction.response.send_message(msg)
+
+
+@client.tree.command(name="gmod_setup", description="Instructions for setting up Garry's Mod to play on the server")
+async def gmod_setup(interaction: discord.Interaction):
+    instructions = (
+        "**How to Setup Garry's Mod for Our Servers:**\n\n"
+        "**Step 1:** Download and install **Garry's Mod** and **Counter-Strike: Source** from Steam.\n\n"
+        "**Step 2:** Subscribe to all (ADD ONLY if prompted) required Workshop collections (run the /gmod_collections command for a list of collections)\n\n"
+        "**Step 3:** Launch Garry's Mod and allow all addons to finish downloading and installing.\n\n"
+        f"**Step 4:** Use the command `/connect_command <game>` to get the connection command for the game you want to play (e.g., {str(GMOD_GAMES)}). Then within Garry's Mod, open the console with the backtick ` or the backslash \\.\n\n"
+        "**Step 5:** Have fun with friends! Fun times all around 😎"
+    )
+    await interaction.response.send_message(instructions)
+
 
 client.run(TOKEN)
