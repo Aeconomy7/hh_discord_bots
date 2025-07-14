@@ -159,6 +159,10 @@ async def start_server(interaction: discord.Interaction, game: str, map: str = N
     if not config:
         await interaction.response.send_message(f"❌ Unknown game: {game}")
         return
+    
+    if game in RUNNING_PROCS and RUNNING_PROCS[game]:
+        await interaction.response.send_message(f"⚠️ {game.capitalize()} server is already running.", ephemeral=True)
+        return
 
     if interaction.user.id in ADMIN_ID:
         RUN_GAME = True
@@ -294,7 +298,7 @@ async def list_servers(interaction: discord.Interaction):
 @client.tree.command(name="status", description="Get server status and player count")
 @app_commands.describe(game="The game to check (e.g., ttt, sandbox, prophunt, arma). Leave blank for all.")
 async def status(interaction: discord.Interaction, game: str = None):
-    await interaction.response.defer(thinking=True, ephemeral=True)
+    await interaction.response.defer(thinking=True)
 
     def get_gmod_status(game, port):
         address = (LAN_IP, port)
@@ -339,7 +343,7 @@ async def status(interaction: discord.Interaction, game: str = None):
             msg = f"**ARMA**: {get_arma_status()}"
         else:
             msg = "Unknown game."
-        await interaction.response.send_message(msg)
+        await interaction.followup.send(msg)
         return
 
     # If no game specified, show all statuses
@@ -347,7 +351,7 @@ async def status(interaction: discord.Interaction, game: str = None):
     for g in ports:
         status_msgs.append(f"**{g.upper()}**: {get_gmod_status(g, ports[g])}\n")
     status_msgs.append(f"**{'ARMA'}**: {get_arma_status()}\n")
-    await interaction.response.send_message("\n".join(status_msgs))
+    await interaction.followup.send("\n".join(status_msgs))
 
 
 
